@@ -11,7 +11,7 @@ import random
 
 class density_chart():
 
-   def __init__(self,data,xlims,ylims):
+   def __init__(self,data):
       if len(data)!=2:
          data=np.array(data).transpose()
       assert len(data)==2
@@ -19,11 +19,15 @@ class density_chart():
       self.yvalues=data[1]
       self.xlabel=''
       self.ylabel=''
+      self.xlims=[min(self.xvalues),max(self.xvalues)]
+      self.ylims=[min(self.yvalues),max(self.yvalues)]
+
+      if self.xlims[0]<0:
+         self.xlims[0]=0
+      if self.ylims[0]<0:
+         self.ylims[0]=0
+
       self.num_data=len(data[0])
-      assert len(xlims)==2
-      assert len(ylims)==2
-      self.xlims=xlims
-      self.ylims=ylims
 
       self.hist_res=0.05
       self.dens_res=0.01
@@ -66,14 +70,18 @@ class density_chart():
          ax0.invert_xaxis()
          ax0.get_xaxis().set_visible(False)
          ax0.set_ylabel(self.ylabel)
+         ax0.set_ylim(self.ylims[0],self.ylims[1])
          ax1.pcolor(self.x_range,self.y_range,self.density_map,cmap=self.cmap)
          ax1.get_xaxis().set_visible(False)
          ax1.get_yaxis().set_visible(False)
+         ax1.set_ylim(self.ylims[0],self.ylims[1])
+         ax1.set_xlim(self.xlims[0],self.xlims[1])
          ax2.axis('off')
          ax3.hist(self.xvalues,bins=int(1/self.hist_res),range=(self.xlims[0],self.xlims[1]))
          ax3.invert_yaxis()
          ax3.set_xlabel(self.xlabel)
          ax3.get_yaxis().set_visible(False)
+         ax3.set_xlim(self.xlims[0],self.xlims[1])
          f.subplots_adjust(hspace=0)
          f.subplots_adjust(wspace=0)
          pl.show(block=False)
