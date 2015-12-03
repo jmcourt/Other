@@ -121,6 +121,7 @@ class density_chart():                                                    # ===T
          f.subplots_adjust(wspace=0)
          pl.show(block=False)                                             #    Show the plot!
       else:
-         print 'Must plot object before showing!'
+         self.plot()                                                      #    If it hasn't been plotted already, plot it now
+         self.show()                                                      #    Try this again
       
       
