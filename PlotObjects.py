@@ -8,48 +8,98 @@ import numpy as np
 import pylab as pl
 import matplotlib.gridspec as gridspec
 import random
+import matplotlib.patches as mpatches
+import imp
 
-class density_chart():                                                    # ===The density_chart object===
+pan = imp.load_source('pan_lib.py', '/home/jamie/Documents/Data/Data_Management/PANTHEON/pan_lib.py')
+      
+
+class chart():
+
+   # Need PLOT function, which sets up the data for the plot, and a MAKE_PLOT function which prepares the actual plot itself
+
+   def plot(self):
+      pass
+
+   def make_plot(self):
+      pass
+
+   def startup(self):                                                     # ===Plot environment initialiser===
+      self.xlabel=''
+      self.ylabel=''
+      self.zlabel=''
+      self.is_plotted=False
+      self.xlims=[0,1]
+      self.ylims=[0,1]
+      self.colormap='cool'                                                # Fetch name of colormap (so it can be changed by user if needs be)
+                        
+   def set_xlabel(self,xlabel):                                           # ===Setter for xlabel===
+      self.xlabel=xlabel
+
+   def set_ylabel(self,ylabel):                                           # ===Setter for ylabel===
+      self.ylabel=ylabel
+
+   def set_zlabel(self,zlabel):                                           # ===Setter for zlabel===
+      self.zlabel=zlabel
+
+   def set_colormap(self,colormap):                                       # ===Set colormap for the densitymap===
+      self.colormap=colormap
+
+   def show(self):                                                        # ===Display the plot===
+      if self.is_plotted:
+         self.make_plot()
+      else:
+         self.plot()
+         self.make_plot()
+      self.fig.show()
+
+   def save(self,savename):                                               # ===Display the plot===
+      if self.is_plotted:
+         self.make_plot()
+      else:
+         self.plot()
+         self.make_plot()
+      self.fig.savefig(savename)
+
+
+
+
+class density_chart(chart):                                               # ===The density_chart object===
 
    '''Density Chart.
 
    Available actions:
 
-    chart.set_densitymap_resolution()
-    chart.set_histogram_resolution()
-    chart.set_colormap()
-    chart.set_xlimit()
-    chart.set_ylimit()
+    chart.set_densitymap_resolution(x)
+    chart.set_histogram_resolution(x)
+    chart.set_colormap(x)
+    chart.set_xlimit(x,y)
+    chart.set_ylimit(x,y)
+    chart.set_xlabel(x)
+    chart.set_ylabel(x)
     chart.plot()
     chart.show()
+    chart.save()
 
    '''
 
    def __init__(self,data):                                               # Must provide two dimensional data to the object.  This can consist of a
                                                                           #  tuple containing the list of x-values in element zero and the identical
                                                                           #  length list of y-values in element one.
+
+      self.startup()                                                      # Basic initialisation
       if len(data)!=2:
          data=np.array(data).transpose()                                  # Allow ill-formatted data to be transposed to see if the transpose can be
                                                                           #  interpreted as two equal-length data series.
       assert len(data)==2                                                 # Crash if data is ill-formatted
+
       self.xvalues=data[0]                                                # Extract x-values
       self.yvalues=data[1]                                                # Extract y-values
-      self.xlabel=''                                                      # Set default x-label as blank (to be changed by user)
-      self.ylabel=''                                                      # Set default y-label as blank (to be changed by user)
-
-      self.xlims=[0,0]                                                    # Set up dummy variables to be filled later
-      self.ylims=[0,0]
-      self.dens_res=1
+      self.dens_res=1                                                     # Set up dummy variables to be filled later
       self.hist_res=1
-
       self.num_data=len(data[0])                                          # Fetch number of data points
-
-      self.set_colormap('afmhot')                                         # Fetch name of colormap (so it can be changed by user if needs be)
-      self.has_dens=False                                                 # Tell the code it has not plotted the density map yet
-
       self.set_xlimit(min(self.xvalues),max(self.xvalues))                # Set the limits to a default value (the max and min values on each axis)
       self.set_ylimit(min(self.yvalues),max(self.yvalues))
-
       self.set_densitymap_resolution(0.01)                                # Set the densitymap resolution to a default value
       self.set_histogram_resolution(0.02)                                 # Set the histogram resolution to a default value
 
@@ -81,10 +131,7 @@ class density_chart():                                                    # ===T
       # The term 0.1*self.dens_res*self.x_diff forces the range to extend to the upper value, while the 0.1 prevents it going any further
       # which it tends to do, presumably due to floating point error. 
 
-   def set_colormap(self,colormap):                                       # ===Set colormap for the densitymap===
-      self.cmap=colormap                                                  #    Colormap=input
-
-   def plot(self):                                                        # ===Prepare Plot===
+   def plot(self):                                                        # ===Prepare Plot Data===
       pixelwidth=int(len(self.x_range))                                   #    Fetch the width, in pixels, of the densitymap
       self.density_map=np.zeros([pixelwidth,pixelwidth])                  #    Create blank densitymap
       for datapoint in range(self.num_data):                              #    For each x,y pair in the data...
@@ -93,35 +140,132 @@ class density_chart():                                                    # ===T
          grid_y=int((y-self.ylims[0])*pixelwidth/self.y_diff)
          if grid_x>=0 and grid_x<pixelwidth and grid_y>=0 and grid_y<pixelwidth:
             self.density_map[grid_y,grid_x]+=1                            #    If pixel is valid, add one to its value
-      self.has_dens=True                                                  #    Let the object know its ready to display
+      self.is_plotted=True                                                #    Let the object know its ready to display
 
-   def show(self):                                                        # ===Display Plot===
-      if self.has_dens:                                                   #    If object believes it is ready to plot...
-         f=pl.figure()                                                    #    Create the figure and the grid, noting size ratios of the panels
-         gs=gridspec.GridSpec(2, 2, width_ratios=[3,1], height_ratios=[1,3])
-         ax0=pl.subplot(gs[0])                                            #    Assign IDs to the cells in the grid
-         ax1=pl.subplot(gs[1])
-         ax2=pl.subplot(gs[2])
-         ax3=pl.subplot(gs[3])
-         ax0.hist(self.xvalues,bins=int(1/self.hist_res),range=(self.xlims[0],self.xlims[1])) # Plot the x-axis histogram
-         ax0.get_xaxis().set_visible(False)                               #    Hide both axes on this panel
-         ax0.get_yaxis().set_visible(False)
-         ax0.set_xlim(self.xlims[0],self.xlims[1])                        #    Set the plot limits
-         ax1.axis('off')                                                  #    Hide the top-left panel
-         ax2.pcolor(self.x_range,self.y_range,self.density_map,cmap=self.cmap) # Plot the densitymap
-         ax2.set_xlabel(self.xlabel)                                      #    Place labels
-         ax2.set_ylabel(self.xlabel)
-         ax2.set_ylim(self.ylims[0],self.ylims[1])                        #    Set both limits for this panel
-         ax2.set_xlim(self.xlims[0],self.xlims[1])
-         ax3.hist(self.yvalues,bins=int(1/self.hist_res),range=(self.ylims[0],self.ylims[1]),orientation='horizontal') # Plot the y-axis histogram
-         ax3.get_xaxis().set_visible(False)                               #    Hide both axes on this panel
-         ax3.get_yaxis().set_visible(False)
-         ax3.set_ylim(self.ylims[0],self.ylims[1])                        #    Set the plot limits
-         f.subplots_adjust(hspace=0)                                      #    Remove the whitespace between panels
-         f.subplots_adjust(wspace=0)
-         pl.show(block=False)                                             #    Show the plot!
-      else:
-         self.plot()                                                      #    If it hasn't been plotted already, plot it now
-         self.show()                                                      #    Try this again
-      
+   def make_plot(self):                                                   # ===Display/Save Plot===
+      self.fig=pl.figure()                                                #    Create the figure and the grid, noting size ratios of the panels
+      gs=gridspec.GridSpec(2, 2, width_ratios=[3,1], height_ratios=[1,3])
+      ax0=pl.subplot(gs[0])                                               #    Assign IDs to the cells in the grid
+      ax1=pl.subplot(gs[1])
+      ax2=pl.subplot(gs[2])
+      ax3=pl.subplot(gs[3])
+      ax0.hist(self.xvalues,bins=int(1/self.hist_res),range=(self.xlims[0],self.xlims[1])) # Plot the x-axis histogram
+      ax0.get_xaxis().set_visible(False)                                  #    Hide both axes on this panel
+      ax0.get_yaxis().set_visible(False)
+      ax0.set_xlim(self.xlims[0],self.xlims[1])                           #    Set the plot limits
+      ax1.axis('off')                                                     #    Hide the top-left panel
+      ax2.pcolor(self.x_range,self.y_range,self.density_map,cmap=self.cmap) # Plot the densitymap
+      ax2.set_xlabel(self.xlabel)                                         #    Place labels
+      ax2.set_ylabel(self.xlabel)
+      ax2.set_ylim(self.ylims[0],self.ylims[1])                           #    Set both limits for this panel
+      ax2.set_xlim(self.xlims[0],self.xlims[1])
+      ax3.hist(self.yvalues,bins=int(1/self.hist_res),range=(self.ylims[0],self.ylims[1]),orientation='horizontal') # Plot the y-axis histogram
+      ax3.get_xaxis().set_visible(False)                                  #    Hide both axes on this panel
+      ax3.get_yaxis().set_visible(False)
+      ax3.set_ylim(self.ylims[0],self.ylims[1])                           #    Set the plot limits
+      self.fig.subplots_adjust(hspace=0)                                  #    Remove the whitespace between panels
+      self.fig.subplots_adjust(wspace=0)
+
+
+
+
+class lightcurve_ls(chart):                                               # ===The Lightcurve_LS object===
+
+   '''Lightcurve/LombScargle Chart.
+
+   Available actions:
+
+    chart.set_window_size(x)
+    chart.set_timestep(x)
+    chart.set_freqstep(x)
+    chart.set_flimit(x,y)
+    chart.set_colormap(x)
+    chart.set_xlabel(x)
+    chart.set_ylabel(x)
+    chart.set_ylabel2(x)
+    chart.set_zlabel(x)
+    chart.plot()
+    chart.show()
+    chart.save()
+
+   '''
+
+   def __init__(self,times,counts,errors):                                #    Must provide 3  1-dimensional datasets to the object, corresponding to times,
+                                                                          #     values and errors.
+
+      self.startup()                                                      #    Basic initialisation
+
+      self.freq_stp_size=0.0001                                           #    Setup frequency stepsize
+      self.freq_low_lim=0.01                                              #    Setup frequency lower limit
+      self.freq_upp_lim=0.4                                               #    Setup frequency upper limit
+      self.make_freq_array()                                              #    Setup frequency range
+
+      self.ylabel2=''
+
+      self.times=np.array(times)                                          #    Save data
+      self.counts=np.array(counts)
+      self.errors=np.array(errors)
+
+      self.time_binning=self.times[1]-self.times[0]                       #    Fetch the data binning
+
+      self.win_size=int(31.25/self.time_binning)                          #    Default 31.25s windows
+      self.time_stp_size=int(1.25/self.time_binning)                      #    Default 1.25s slide between windows
+
+   def make_freq_array(self):                                             # ===Construct frequency array===
+      self.freqs=np.arange(self.freq_low_lim,self.freq_upp_lim,self.freq_stp_size)
+
+   def set_ylabel2(self,ylabel2):                                         # ===Setter for ylabel2===
+      self.ylabel2=ylabel2
+
+   def set_window_size(self,window_size):                                 # ===Setter for sliding window size in seconds===
+      self.win_size=int(window_size/self.time_binning)
+
+   def set_timestep(self,timestep):                                       # ===Setter for time stepsize===
+      self.time_stp_size=int(timestep/self.time_binning)
+
+   def set_freqstep(self,freqstep):                                       # ===Setter for frequency step size===
+      self.freq_stp_size=freqstep
+      self.make_freq_array()                                              #    Reconstruct the frequency array
+
+   def set_flimit(self,f_low,f_high):                                     # ===Setter for upper and lower frequency limits===
+      self.freq_low_lim=f_low                                             #    Set lower frequency limit
+      self.freq_upp_lim=f_high                                            #    Set upper frequency limit
+      self.make_freq_array()                                              #    Reconstruct the frequency array
+
+   def plot(self):                                                        # ===Prepare Plot Data===
+      spectrogram=[]                                                      #    Setup blank list to append spectra into
+      lcurve=[]                                                           #    Setup blank list to append mean values into
+      prog=None                                                           #    Token needed to print % completion to screen
+      for i in range(len(self.times)-self.win_size)[::self.time_stp_size]:
+         prog2=(i*10)/(len(self.times)-self.win_size)
+         if prog2!=prog:
+            print 'Plotting:',prog2*10,'%'                                #    Print % complete every 10%
+            prog=prog2
+         spectrogram.append(pan.lomb_scargle(self.times[i:i+self.win_size],self.counts[i:i+self.win_size],self.errors[i:i+self.win_size],self.freqs))
+         lcurve.append(np.mean(self.counts[i:i+self.win_size]))           #    Append spectrum and average value
+      self.spectrogram=(np.array(spectrogram)/1000.0).transpose()         #    Transpose spectrum/time matrix
+      self.lcurve=np.array(lcurve)
+      self.is_plotted=True                                                #    Let object know it is plotted
+
+   def make_plot(self):                                                   # ===Display/Save Plots===
+      taxis=self.times[:(len(self.times)-self.win_size)][::self.time_stp_size] # Setup the time axis
+      self.fig=pl.figure()                                                #    Create the figure object
+      ax1=self.fig.add_axes([0.1,0.1,0.65,0.8])                           #    Create the spectrogram axes
+      pc=ax1.pcolor(taxis,self.freqs,self.spectrogram,cmap=self.colormap) #    Plot spectrogram
+      ax1.set_xlabel(self.xlabel)                                         #    Set global x-label
+      ax1.set_ylim(self.freqs[0],self.freqs[-1])                          #    Set y-limits of spectrogram
+      ax1.set_ylabel(self.ylabel)                                         #    Set y-label of spectrogram
+      position=self.fig.add_axes([0.85,0.1,0.03,0.8])                     #    Setup position of colorbar
+      cbar=self.fig.colorbar(pc,cax=position)                             #    Make colorbar
+      cbar.set_label(self.zlabel+' (*1000)', rotation=270,labelpad=15)    #    Set z-label
+      ax2 = ax1.twinx()                                                   #    Create the lightcurve axes
+      ax2.yaxis.tick_right()                                              #    Force the lightcurve y-axis to the right
+      ax2.yaxis.set_label_position('right')                               #    Push the label over there too
+      ax2.plot(taxis,self.lcurve,'k')                                     #    Plot the lightcurve
+      ax2.set_ylim(0,max(self.lcurve)*1.1)                                #    Set y-limits of lightcurve
+      ax2.set_xlim(taxis[0],taxis[-1])                                    #    Set global x-limits
+      ax2.set_ylabel(self.ylabel2,rotation=-90,labelpad=15)               #    Set y-label of lightcurve
+      black_patch = mpatches.Patch(color='black', label='Count Rate')     #    Create object to represent the lightcurve in the key
+      pl.legend(handles=[black_patch])                                    #    Create the key
+
       
