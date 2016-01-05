@@ -4,6 +4,7 @@ import warnings
 
 warnings.simplefilter("ignore")
 
+import scipy.stats as st
 import numpy as np
 import pylab as pl
 import matplotlib.gridspec as gridspec
@@ -77,6 +78,8 @@ class density_chart(chart):                                               # ===T
     chart.set_ylimit(x,y)
     chart.set_xlabel(x)
     chart.set_ylabel(x)
+    chart.show_pearson()
+    chart.hide_pearson()
     chart.plot()
     chart.show()
     chart.save()
@@ -98,10 +101,14 @@ class density_chart(chart):                                               # ===T
       self.dens_res=1                                                     # Set up dummy variables to be filled later
       self.hist_res=1
       self.num_data=len(data[0])                                          # Fetch number of data points
+
+      assert len(data[0])==len(data[1])
+
       self.set_xlimit(min(self.xvalues),max(self.xvalues))                # Set the limits to a default value (the max and min values on each axis)
       self.set_ylimit(min(self.yvalues),max(self.yvalues))
       self.set_densitymap_resolution(0.01)                                # Set the densitymap resolution to a default value
       self.set_histogram_resolution(0.02)                                 # Set the histogram resolution to a default value
+      self.plot_pearson=False                                             # Don't show Pearson Coefficient by default
 
    def set_densitymap_resolution(self,density):                           # ===Set the densitymap resolution===
       self.dens_res=density                                               #    Densitymap resolution = the input value
@@ -121,6 +128,12 @@ class density_chart(chart):                                               # ===T
       self.ylims[1]=ylim_upper                                            #    Fetch upper limit
       self.y_diff=self.ylims[1]-self.ylims[0]                             #    Store difference between limits
       self.make_ranges('y')                                               #    Re-Create y range.     
+
+   def show_pearson(self):                                                #    Display Pearson Coefficient in the final plot
+      self.plot_pearson=True
+
+   def hide_pearson(self):                                                #    Hide Pearson Coefficient in the final plot
+      self.plot_pearson=False
 
    def make_ranges(self,xy='xy'):                                         # ===Make ranges of x and y axis values===
       if 'x' in xy:                                                       #    Allow selective making of only one range
@@ -154,15 +167,17 @@ class density_chart(chart):                                               # ===T
       ax0.get_yaxis().set_visible(False)
       ax0.set_xlim(self.xlims[0],self.xlims[1])                           #    Set the plot limits
       ax1.axis('off')                                                     #    Hide the top-left panel
-      ax2.pcolor(self.x_range,self.y_range,self.density_map,cmap=self.cmap) # Plot the densitymap
+      if self.plot_pearson:                                               #    If requested, print the Pearson Correlation Coefficient in the empty panel
+         ax1.text(0.1,0.01,'Pearson Coeff. ='+str(st.pearsonr(self.xvalues,self.yvalues)[0])[:4])
+      ax2.pcolor(self.x_range,self.y_range,self.density_map,cmap=self.colormap) # Plot the densitymap
       ax2.set_xlabel(self.xlabel)                                         #    Place labels
-      ax2.set_ylabel(self.xlabel)
+      ax2.set_ylabel(self.ylabel)
       ax2.set_ylim(self.ylims[0],self.ylims[1])                           #    Set both limits for this panel
       ax2.set_xlim(self.xlims[0],self.xlims[1])
       ax3.hist(self.yvalues,bins=int(1/self.hist_res),range=(self.ylims[0],self.ylims[1]),orientation='horizontal') # Plot the y-axis histogram
       ax3.get_xaxis().set_visible(False)                                  #    Hide both axes on this panel
       ax3.get_yaxis().set_visible(False)
-      ax3.set_ylim(self.ylims[0],self.ylims[1])                           #    Set the plot limits
+      ax3.set_ylim(self.ylims[0],self.ylims[1])                           #    Set the plot limits 
       self.fig.subplots_adjust(hspace=0)                                  #    Remove the whitespace between panels
       self.fig.subplots_adjust(wspace=0)
 
@@ -186,6 +201,7 @@ class lightcurve_ls(chart):                                               # ===T
     chart.set_zlabel(x)
     chart.plot()
     chart.show()
+    chart.show_Inu(lag=0)
     chart.save()
 
    '''
@@ -195,7 +211,7 @@ class lightcurve_ls(chart):                                               # ===T
 
       self.startup()                                                      #    Basic initialisation
 
-      self.freq_stp_size=0.0001                                           #    Setup frequency stepsize
+      self.freq_stp_size=0.001                                            #    Setup frequency stepsize
       self.freq_low_lim=0.01                                              #    Setup frequency lower limit
       self.freq_upp_lim=0.4                                               #    Setup frequency upper limit
       self.make_freq_array()                                              #    Setup frequency range
@@ -211,8 +227,16 @@ class lightcurve_ls(chart):                                               # ===T
       self.win_size=int(31.25/self.time_binning)                          #    Default 31.25s windows
       self.time_stp_size=int(1.25/self.time_binning)                      #    Default 1.25s slide between windows
 
+      self.plot_maxfreqs=False
+
    def make_freq_array(self):                                             # ===Construct frequency array===
       self.freqs=np.arange(self.freq_low_lim,self.freq_upp_lim,self.freq_stp_size)
+
+   def show_max_freqs(self):                                              # ===Add a plot of max frequencies to object===
+      self.plot_maxfreqs=True
+
+   def hide_max_freqs(self):                                              # ===Remove plot of max frequencies from object===
+      self.plot_maxfreqs=False
 
    def set_ylabel2(self,ylabel2):                                         # ===Setter for ylabel2===
       self.ylabel2=ylabel2
@@ -235,16 +259,20 @@ class lightcurve_ls(chart):                                               # ===T
    def plot(self):                                                        # ===Prepare Plot Data===
       spectrogram=[]                                                      #    Setup blank list to append spectra into
       lcurve=[]                                                           #    Setup blank list to append mean values into
+      maxfreqs=[]
       prog=None                                                           #    Token needed to print % completion to screen
       for i in range(len(self.times)-self.win_size)[::self.time_stp_size]:
          prog2=(i*10)/(len(self.times)-self.win_size)
          if prog2!=prog:
             print 'Plotting:',prog2*10,'%'                                #    Print % complete every 10%
             prog=prog2
-         spectrogram.append(pan.lomb_scargle(self.times[i:i+self.win_size],self.counts[i:i+self.win_size],self.errors[i:i+self.win_size],self.freqs))
+         spectrum=pan.lomb_scargle(self.times[i:i+self.win_size],self.counts[i:i+self.win_size],self.errors[i:i+self.win_size],self.freqs)
+         spectrogram.append(spectrum)
+         maxfreqs.append(self.freqs[np.argmax(spectrum)])
          lcurve.append(np.mean(self.counts[i:i+self.win_size]))           #    Append spectrum and average value
       self.spectrogram=(np.array(spectrogram)/1000.0).transpose()         #    Transpose spectrum/time matrix
       self.lcurve=np.array(lcurve)
+      self.maxfreqs=np.array(maxfreqs)
       self.is_plotted=True                                                #    Let object know it is plotted
 
    def make_plot(self):                                                   # ===Display/Save Plots===
@@ -266,6 +294,39 @@ class lightcurve_ls(chart):                                               # ===T
       ax2.set_xlim(taxis[0],taxis[-1])                                    #    Set global x-limits
       ax2.set_ylabel(self.ylabel2,rotation=-90,labelpad=15)               #    Set y-label of lightcurve
       black_patch = mpatches.Patch(color='black', label='Count Rate')     #    Create object to represent the lightcurve in the key
-      pl.legend(handles=[black_patch])                                    #    Create the key
+      if self.plot_maxfreqs==True:
+         ax2.plot(taxis,((self.maxfreqs-self.freqs[0])*max(self.lcurve)*1.1/self.freqs[-1]))
+         blue_patch = mpatches.Patch(color='blue', label='Peak Frequency')#    Create object to represent the lightcurve in the key
+         pl.legend(handles=[black_patch,blue_patch])                      #    Create the key
+      else:
+         pl.legend(handles=[black_patch])
+
+   def show_Inu(self,lag=0):                                              #    Feature to quickly construct a 2D histogram of peak frequency against intensity
+      if not self.is_plotted:
+         self.plot()
+      if lag=='auto':                                                     #    Lag offsets the two datasets against each other by a time t.  If 'auto', this time t is
+                                                                          #       the sliding window size.
+         lag=self.win_size*self.time_binning
+      c_lag=int(lag/(self.time_binning*self.time_stp_size))
+      if c_lag==0:
+         x=self.lcurve
+         y=self.maxfreqs
+         textra=''
+      elif lag>0:
+         x=self.lcurve[c_lag:]
+         y=self.maxfreqs[:-c_lag]
+         textra=' ('+str(lag)+'s lag)'
+      else:
+         x=self.lcurve[:c_lag]
+         y=self.maxfreqs[-c_lag:]
+         textra=' ('+str(lag)+'s lag)'
+         
+      den_chart=density_chart([x,y])
+      den_chart.set_xlabel(r'Intensity (cts s$^{-1}$)')
+      den_chart.set_ylabel('Peak Frequency (Hz)'+textra)
+      den_chart.show_pearson()
+      den_chart.set_colormap('inferno')
+      den_chart.plot()
+      den_chart.show()
 
       
