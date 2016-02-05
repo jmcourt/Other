@@ -251,7 +251,7 @@ class lightcurve_ls(chart):                                               # ===T
       self.freq_stp_size=freqstep
       self.make_freq_array()                                              #    Reconstruct the frequency array
 
-   def set_flimit(self,f_low,f_high):                                     # ===Setter for upper and lower frequency limits===
+   def set_freqlimit(self,f_low,f_high):                                  # ===Setter for upper and lower frequency limits===
       self.freq_low_lim=f_low                                             #    Set lower frequency limit
       self.freq_upp_lim=f_high                                            #    Set upper frequency limit
       self.make_freq_array()                                              #    Reconstruct the frequency array
@@ -273,13 +273,13 @@ class lightcurve_ls(chart):                                               # ===T
       self.spectrogram=(np.array(spectrogram)/1000.0).transpose()         #    Transpose spectrum/time matrix
       self.lcurve=np.array(lcurve)
       self.maxfreqs=np.array(maxfreqs)
+      self.taxis=self.times[:(len(self.times)-self.win_size)][::self.time_stp_size] # Setup the time axis
       self.is_plotted=True                                                #    Let object know it is plotted
 
    def make_plot(self):                                                   # ===Display/Save Plots===
-      taxis=self.times[:(len(self.times)-self.win_size)][::self.time_stp_size] # Setup the time axis
       self.fig=pl.figure()                                                #    Create the figure object
       ax1=self.fig.add_axes([0.1,0.1,0.65,0.8])                           #    Create the spectrogram axes
-      pc=ax1.pcolor(taxis,self.freqs,self.spectrogram,cmap=self.colormap) #    Plot spectrogram
+      pc=ax1.pcolor(self.taxis,self.freqs,self.spectrogram,cmap=self.colormap) #    Plot spectrogram
       ax1.set_xlabel(self.xlabel)                                         #    Set global x-label
       ax1.set_ylim(self.freqs[0],self.freqs[-1])                          #    Set y-limits of spectrogram
       ax1.set_ylabel(self.ylabel)                                         #    Set y-label of spectrogram
@@ -289,13 +289,13 @@ class lightcurve_ls(chart):                                               # ===T
       ax2 = ax1.twinx()                                                   #    Create the lightcurve axes
       ax2.yaxis.tick_right()                                              #    Force the lightcurve y-axis to the right
       ax2.yaxis.set_label_position('right')                               #    Push the label over there too
-      ax2.plot(taxis,self.lcurve,'k')                                     #    Plot the lightcurve
+      ax2.plot(self.taxis,self.lcurve,'k')                                #    Plot the lightcurve
       ax2.set_ylim(0,max(self.lcurve)*1.1)                                #    Set y-limits of lightcurve
-      ax2.set_xlim(taxis[0],taxis[-1])                                    #    Set global x-limits
+      ax2.set_xlim(self.taxis[0],self.taxis[-1])                                    #    Set global x-limits
       ax2.set_ylabel(self.ylabel2,rotation=-90,labelpad=15)               #    Set y-label of lightcurve
       black_patch = mpatches.Patch(color='black', label='Count Rate')     #    Create object to represent the lightcurve in the key
       if self.plot_maxfreqs==True:
-         ax2.plot(taxis,((self.maxfreqs-self.freqs[0])*max(self.lcurve)*1.1/self.freqs[-1]))
+         ax2.plot(self.taxis,((self.maxfreqs-self.freqs[0])*max(self.lcurve)*1.1/self.freqs[-1]))
          blue_patch = mpatches.Patch(color='blue', label='Peak Frequency')#    Create object to represent the lightcurve in the key
          pl.legend(handles=[black_patch,blue_patch])                      #    Create the key
       else:
