@@ -228,12 +228,19 @@ class lightcurve_ls(chart):                                               # ===T
       self.time_stp_size=int(1.25/self.time_binning)                      #    Default 1.25s slide between windows
 
       self.plot_maxfreqs=False
+      self.plot_lc=True
 
    def make_freq_array(self):                                             # ===Construct frequency array===
       self.freqs=np.arange(self.freq_low_lim,self.freq_upp_lim,self.freq_stp_size)
 
    def show_max_freqs(self):                                              # ===Add a plot of max frequencies to object===
       self.plot_maxfreqs=True
+
+   def show_lc(self):                                                     # ===Add a plot of max frequencies to object===
+      self.plot_lc=True
+
+   def hide_lc(self):                                                     # ===Remove plot of max frequencies from object===
+      self.plot_lc=False
 
    def hide_max_freqs(self):                                              # ===Remove plot of max frequencies from object===
       self.plot_maxfreqs=False
@@ -287,19 +294,24 @@ class lightcurve_ls(chart):                                               # ===T
       cbar=self.fig.colorbar(pc,cax=position)                             #    Make colorbar
       cbar.set_label(self.zlabel+' (*1000)', rotation=270,labelpad=15)    #    Set z-label
       ax2 = ax1.twinx()                                                   #    Create the lightcurve axes
-      ax2.yaxis.tick_right()                                              #    Force the lightcurve y-axis to the right
-      ax2.yaxis.set_label_position('right')                               #    Push the label over there too
-      ax2.plot(self.taxis,self.lcurve,'k')                                #    Plot the lightcurve
-      ax2.set_ylim(0,max(self.lcurve)*1.1)                                #    Set y-limits of lightcurve
-      ax2.set_xlim(self.taxis[0],self.taxis[-1])                                    #    Set global x-limits
-      ax2.set_ylabel(self.ylabel2,rotation=-90,labelpad=15)               #    Set y-label of lightcurve
-      black_patch = mpatches.Patch(color='black', label='Count Rate')     #    Create object to represent the lightcurve in the key
-      if self.plot_maxfreqs==True:
+      ax2.set_xlim(self.taxis[0],self.taxis[-1])                       #    Set global x-limits
+      leg_key=[]
+      if self.plot_lc:
+         ax2.yaxis.tick_right()                                           #    Force the lightcurve y-axis to the right
+         ax2.yaxis.set_label_position('right')                            #    Push the label over there too
+         ax2.plot(self.taxis,self.lcurve,'k')                             #    Plot the lightcurve
+         ax2.set_ylim(0,max(self.lcurve)*1.1)                             #    Set y-limits of lightcurve
+         ax2.set_ylabel(self.ylabel2,rotation=-90,labelpad=15)            #    Set y-label of lightcurve
+         black_patch = mpatches.Patch(color='black', label='Count Rate')  #    Create object to represent the lightcurve in the key
+         leg_key.append(black_patch)
+      else:
+         ax2.set_yticks([],[])
+      if self.plot_maxfreqs:
          ax2.plot(self.taxis,((self.maxfreqs-self.freqs[0])*max(self.lcurve)*1.1/self.freqs[-1]))
          blue_patch = mpatches.Patch(color='blue', label='Peak Frequency')#    Create object to represent the lightcurve in the key
-         pl.legend(handles=[black_patch,blue_patch])                      #    Create the key
-      else:
-         pl.legend(handles=[black_patch])
+         leg_key.append(blue_patch)
+      if leg_key!=[]:
+         pl.legend(handles=leg_key)
 
    def show_Inu(self,lag=0):                                              #    Feature to quickly construct a 2D histogram of peak frequency against intensity
       if not self.is_plotted:
