@@ -101,6 +101,7 @@ class density_chart(chart):                                               # ===T
       self.dens_res=1                                                     # Set up dummy variables to be filled later
       self.hist_res=1
       self.num_data=len(data[0])                                          # Fetch number of data points
+      self.contour=False
 
       assert len(data[0])==len(data[1])
 
@@ -116,6 +117,9 @@ class density_chart(chart):                                               # ===T
 
    def set_histogram_resolution(self,density):                            # ===Set the histogram resolution===
       self.hist_res=density                                               #    Histogram resolution = the input value
+
+   def show_contour(self):
+      self.contour=True
 
    def set_xlimit(self,xlim_lower,xlim_upper):                            # ===Set the limits on the x-axis===
       self.xlims[0]=xlim_lower                                            #    Fetch lower limit
@@ -169,7 +173,10 @@ class density_chart(chart):                                               # ===T
       ax1.axis('off')                                                     #    Hide the top-left panel
       if self.plot_pearson:                                               #    If requested, print the Pearson Correlation Coefficient in the empty panel
          ax1.text(0.1,0.01,'Pearson Coeff. ='+str(st.pearsonr(self.xvalues,self.yvalues)[0])[:4])
-      ax2.pcolor(self.x_range,self.y_range,self.density_map,cmap=self.colormap) # Plot the densitymap
+      if not self.contour:
+         ax2.pcolor(self.x_range,self.y_range,self.density_map,cmap=self.colormap) # Plot the densitymap
+      else:
+         ax2.contour(self.x_range,self.y_range,self.density_map)
       ax2.set_xlabel(self.xlabel)                                         #    Place labels
       ax2.set_ylabel(self.ylabel)
       ax2.set_ylim(self.ylims[0],self.ylims[1])                           #    Set both limits for this panel
@@ -229,6 +236,7 @@ class lightcurve_ls(chart):                                               # ===T
 
       self.plot_maxfreqs=False
       self.plot_lc=True
+      self.contours=False
 
    def make_freq_array(self):                                             # ===Construct frequency array===
       self.freqs=np.arange(self.freq_low_lim,self.freq_upp_lim,self.freq_stp_size)
@@ -241,6 +249,9 @@ class lightcurve_ls(chart):                                               # ===T
 
    def hide_lc(self):                                                     # ===Remove plot of max frequencies from object===
       self.plot_lc=False
+
+   def show_contour(self):                                                # ===Add contour plot object===
+      self.contours=True
 
    def hide_max_freqs(self):                                              # ===Remove plot of max frequencies from object===
       self.plot_maxfreqs=False
@@ -294,22 +305,23 @@ class lightcurve_ls(chart):                                               # ===T
       cbar=self.fig.colorbar(pc,cax=position)                             #    Make colorbar
       cbar.set_label(self.zlabel+' (*1000)', rotation=270,labelpad=15)    #    Set z-label
       ax2 = ax1.twinx()                                                   #    Create the lightcurve axes
-      ax2.set_xlim(self.taxis[0],self.taxis[-1])                       #    Set global x-limits
+      ax2.set_xlim(self.taxis[0],self.taxis[-1])                          #    Set global x-limits
       leg_key=[]
+      blue_patch = mpatches.Patch(color='blue', label='Count Rate')       #    Create object to represent the lightcurve in the key
+      black_patch = mpatches.Patch(color='black', label='Peak Frequency') #    Create object to represent the lightcurve in the key
       if self.plot_lc:
          ax2.yaxis.tick_right()                                           #    Force the lightcurve y-axis to the right
          ax2.yaxis.set_label_position('right')                            #    Push the label over there too
-         ax2.plot(self.taxis,self.lcurve,'k')                             #    Plot the lightcurve
+         ax2.plot(self.taxis,self.lcurve,'b')                             #    Plot the lightcurve
          ax2.set_ylim(0,max(self.lcurve)*1.1)                             #    Set y-limits of lightcurve
          ax2.set_ylabel(self.ylabel2,rotation=-90,labelpad=15)            #    Set y-label of lightcurve
-         black_patch = mpatches.Patch(color='black', label='Count Rate')  #    Create object to represent the lightcurve in the key
-         leg_key.append(black_patch)
+         leg_key.append(blue_patch)
       else:
          ax2.set_yticks([],[])
       if self.plot_maxfreqs:
-         ax2.plot(self.taxis,((self.maxfreqs-self.freqs[0])*max(self.lcurve)*1.1/self.freqs[-1]))
-         blue_patch = mpatches.Patch(color='blue', label='Peak Frequency')#    Create object to represent the lightcurve in the key
-         leg_key.append(blue_patch)
+         ax2.plot(self.taxis,((self.maxfreqs-self.freqs[0])*max(self.lcurve)*1.1/self.freqs[-1]),'k')
+
+         leg_key.append(black_patch)
       if leg_key!=[]:
          pl.legend(handles=leg_key)
 
